@@ -3,9 +3,10 @@
 GPU Cluster Usage Tutorial
 ==
  *--How to make caffe and enjoy tensorflow on Torque*
-
+ 
+      
+2016-11-12
 Yunfeng Wang
-wangyf11@mail.ustc.edu.cn
 
 ---
 
@@ -16,15 +17,15 @@ PBS and Torque
   1. OpenPBS: original open source version
   2. Torque: A fork of OpenPBS
   3. PBS Pro: the commercial version of PBS
-- Torque: **T**erascale **O**pen-source **R**esource and **Q**U**E**ue Manager, a distributed resource manager providing control over batch jobs and distributed compute nodes
+- Torque: **T**erascale **O**pen-source **R**esource and **QUE**ue Manager, a distributed resource manager providing control over batch jobs and distributed compute nodes
 - All commands of Torque are compatible with PBS 
 
 ---
 
 Basic info about cluster
 ==
-- TorqueServer: 192.168.17.240, 8 cores
-- GPU cluster: 192.168.6.[101-107], aliased as Gpu101-Gpu107, 32 cores each node
+- Head node: 192.168.17.240, 8 cores
+- GPU cluster: 192.168.6.[101-107], aliased as Gpu101-Gpu107, 32 cores on each node. We can only access Gpu107
 - Shared data disks and home dir
 
 ----
@@ -41,9 +42,26 @@ Codename:       Final
 
 ---
 
+Cluster types
+==
+```shell
+GPU used detail:
+         0  1  |  2  3  4  5  6  7
+GPU101: [x][x] | [x][x]
+GPU102: [x][x] | [x][x]
+GPU103: [x][x] | [x][x][x][x][x][x]
+GPU104: [x][x] | [x][x][x][x][x][x]
+GPU105: [x][x] | [x][x][x][x][x][x]
+GPU106: [x][x] | [x][x][x][x][x][x]
+GPU107: [x][x] | [x][x][x][x][x][x]
+
+Type S:{Gpu101,Gpu102};D:{Gpu103,Gpu104};M:{Gpu105,Gpu106,Gpu107}
+```
+---
+
 Workflow of run job in Torque
 ==
-- First login to torqueserver, then debug on Gpu107
+- First login to head node, then debug on Gpu107
 - Since everything is OK, write the script and send your task to queue
 - Wait
 - Check your results and errors
@@ -153,7 +171,7 @@ Last login: Fri Nov 11 11:02:43 2016 from torqueserver
 2. Write shell script to run your job
 ```shell
 # /home/yunfeng/run_mnist.sh Example script of running mnist
-cd /data3/yunfeng/caffe
+cd /data2/yunfeng/caffe
 ./data/mnist/get_mnist.sh
 ./examples/mnist/create_mnist.sh
 ./examples/mnist/train_lenet.sh
@@ -168,23 +186,7 @@ cd /data3/yunfeng/caffe
 [yunfeng@Gpu107 ~]$ ./run_mnist.sh
 ```
 
----
 
-Cluster types
-==
-```shell
-GPU used detail:
-         0  1  |  2  3  4  5  6  7
-GPU101: [x][x] | [x][x]
-GPU102: [x][x] | [x][x]
-GPU103: [x][x] | [x][x][x][x][x][x]
-GPU104: [x][x] | [x][x][x][x][x][x]
-GPU105: [x][x] | [x][x][x][x][x][x]
-GPU106: [x][x] | [x][x][x][x][x][x]
-GPU107: [x][x] | [x][x][x][x][x][x]
-
-Type S:{Gpu101,Gpu102};D:{Gpu103,Gpu104};M:{Gpu105,Gpu106,Gpu107}
-```
 
 ---
 
@@ -228,8 +230,33 @@ Other useful pbs commands
 [yunfeng@torqueServer ~]$ qstat # Show status of pbs jobs
 [yunfeng@torqueServer ~]$ qhold job_id # Hold pbs jobs
 [yunfeng@torqueServer ~]$ qrls job_id #Release hold of jobs
-[yunfeng@torqueServer ~]$ qel job_id # Delete job
+[yunfeng@torqueServer ~]$ qdel job_id # Delete job
 [yunfeng@torqueServer ~]$ pbsnodes # Show staus of nodes
+```
+
+---
+
+Compile caffe from scratch
+==
+```shell
+$ ssh Gpu107
+$ cd /data2/yunfeng/Lab
+$ git clone https://github.com/BVLC/caffe.git
+$ cd caffe
+$ cp Makefile.config.example Makefile.config 
+```
+Edit `Makefile.config`, change these lines:
+```shell
+5  USE_CUDNN := 1 
+21 OPENCV_VERSION := 3
+51 BLAS_LIB := /usr/lib64/atlas
+79 PYTHON_LIB := /usr/lib64
+```
+Then save `Makefile.config`, run commands:
+```shell
+$ make all -j32
+$ make test -j32
+$ make runtest -j32
 ```
 
 ---
@@ -260,12 +287,12 @@ How to prepare data for my experiment?
 ==
 1. Use `scp` to copy your data to cluster
 ```shell
-$ scp -r my_data/ yunfeng@192.168.17.240:/data3/yunfeng/
+$ scp -r my_data/ yunfeng@192.168.17.240:/data2/yunfeng/
 ```
 2. Since data disks are shared, you can then use  your data in code
 ```python
 # example.py
-data_dir = '/data3/yunfeng/my_data'
+data_dir = '/data2/yunfeng/my_data'
 result = my_func(data_dir)
 ```
 
@@ -295,7 +322,7 @@ $ tensorboard --logdir=path/to/log-directory
 
 Docs location
 ==
-<https://github.com/vra/docs-and-slides>
+192.168.6.232:/data2/public/torque_tutorial
 
 ---
 
